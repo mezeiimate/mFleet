@@ -173,7 +173,7 @@ const ServiceBoard = () => {
           <div className="bg-white border border-gray-200 px-5 py-3 rounded-2xl shadow-sm flex items-center gap-3">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Receipt size={20} /></div>
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Költségek Összesen</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Költségek összesen</p>
               <p className="text-xl font-black text-gray-800 leading-none">{totalCost.toLocaleString('hu-HU')} Ft</p>
             </div>
           </div>
@@ -243,7 +243,10 @@ const ServiceBoard = () => {
                   </div>
                   <div className={`p-3 rounded-lg text-sm mb-4 ml-3 border ${log.description === 'Lejárt műszaki' ? 'bg-red-50 text-red-800 border-red-100 font-bold' : 'bg-amber-50/50 text-gray-700 border-amber-100'}`}>"{log.description}"</div>
                   <div className="flex gap-2 ml-3">
-                    <button onClick={() => handleDeleteItem(log.id)} className="px-4 py-2 border border-gray-300 text-gray-600 hover:text-red-600 hover:bg-red-50 font-medium rounded-lg text-sm transition-colors" title="Javítási feladat törlése">Törlés</button>
+                    {/* ÚJ: Ha lejárt műszaki, nem szabad manuálisan törölni, csak a zöld gombbal lezárni! */}
+                    {log.description !== 'Lejárt műszaki' && (
+                      <button onClick={() => handleDeleteItem(log.id)} className="px-4 py-2 border border-gray-300 text-gray-600 hover:text-red-600 hover:bg-red-50 font-medium rounded-lg text-sm transition-colors" title="Javítási feladat törlése">Törlés</button>
+                    )}
                     <button onClick={() => openResolveModal(log)} className="flex-1 py-2 bg-green-600 text-white hover:bg-green-700 font-bold rounded-lg text-sm shadow-sm transition-colors" title="Költség megadása és javítás befejezése">{log.description === 'Lejárt műszaki' ? 'Költség megadása és Újra-vizsgáztatás' : 'Javítás lezárása'}</button>
                   </div>
                 </div>

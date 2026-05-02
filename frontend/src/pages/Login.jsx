@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, User } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,6 +8,15 @@ const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  // ÚJ LÉPÉS: Betöltéskor megnézzük, dobott-e ki a rendszer lejárt token miatt!
+  useEffect(() => {
+    const authError = sessionStorage.getItem('authError');
+    if (authError) {
+      toast.error(authError);
+      sessionStorage.removeItem('authError'); // Miután kiírtuk, töröljük a memóriából
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +36,6 @@ const Login = ({ onLogin }) => {
         navigate('/'); 
       }
     } catch (err) {
-      // Itt már nem fog frissülni az oldal, a toast látható marad!
       toast.error(err.message || 'Hibás felhasználónév vagy jelszó!');
     }
   };
@@ -50,7 +58,7 @@ const Login = ({ onLogin }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-[#D3D5D6] rounded-xl focus:ring-2 focus:ring-[#13395C] outline-none transition-all font-medium"
-                placeholder="pl. admin"
+                placeholder="Felhasználónév"
                 required
               />
             </div>

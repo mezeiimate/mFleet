@@ -16,16 +16,18 @@ export const apiFetch = async (endpoint, options = {}) => {
     headers,
   });
 
-  // Ha lejárt a token, dobjon ki, DE a login oldali hibás jelszónál NE frissítse az oldalt!
+  // Ha lejárt a token
   if (response.status === 401 || response.status === 403) {
     if (endpoint !== '/login') {
       localStorage.removeItem('token');
       localStorage.removeItem('fleet_user');
+      // ÚJ LÉPÉS: Eltároljuk az üzenetet a memóriában az újratöltés előtt!
+      sessionStorage.setItem('authError', 'A munkamenet lejárt, kérlek jelentkezz be újra!');
       window.location.href = '/login'; 
     }
   }
 
-  // Ha valami más hiba van (pl. 400, 404, 500, vagy 401 a loginon)
+  // Ha valami más hiba van
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     throw new Error(errData.error || errData.message || 'Szerverhiba történt.');
