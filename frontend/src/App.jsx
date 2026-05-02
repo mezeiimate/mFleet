@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, User as UserIcon, Menu, X } from 'lucide-react';
-import { Toaster } from 'react-hot-toast'; // ÚJ: Értesítések
+import { Toaster } from 'react-hot-toast';
 
 import Dashboard from './pages/Dashboard';
 import VehicleList from './pages/VehicleList';
@@ -16,7 +16,6 @@ function App() {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('fleet_user');
     const token = localStorage.getItem('token');
-    // ÚJ BIZTONSÁG: Csak akkor van belépve, ha usert ÉS tokent is talál!
     return (saved && token) ? JSON.parse(saved) : null;
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -48,8 +47,8 @@ function App() {
 
   if (!user) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <Toaster position="bottom-right" /> {/* Hibaüzenetekhez */}
+      <div className="bg-[#D3D5D6]/30 min-h-screen">
+        <Toaster position="top-center" />
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
@@ -73,34 +72,32 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans">
+    <div className="min-h-screen bg-[#D3D5D6]/40 text-gray-900 font-sans">
       
-      {/* ÚJ: Globális Toast tároló az értesítésekhez */}
       <Toaster 
-        position="bottom-right" 
+        position="top-center" 
         toastOptions={{ 
           duration: 4000, 
           style: { fontWeight: 'bold', borderRadius: '12px', padding: '16px' } 
         }} 
       />
 
-      {/* ÚJ DIZÁJN: Mélykék fejléc (#001A33) fehér szövegekkel */}
-      <nav className="bg-[#001A33] sticky top-0 z-50 shadow-md">
+      <nav className="bg-[#0B2C4B] sticky top-0 z-50 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             
             <div className="flex items-center">
               <span className="text-2xl font-black text-white tracking-tight">mFleet</span>
-              <div className="hidden md:flex ml-10 space-x-6">
+              {/* lg:flex a md:flex helyett */}
+              <div className="hidden lg:flex ml-10 space-x-6">
                 {navLinks.map(link => (
                   <Link 
                     key={link.to} 
                     to={link.to} 
-                    // ÚJ DIZÁJN: Az aktív menüpont Ezüstszürke (#C8C9CA) lesz
-                    className={`px-1 pt-1 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-1 pt-1 text-sm font-bold border-b-4 transition-colors ${
                       location.pathname === link.to 
-                      ? 'border-[#C8C9CA] text-[#C8C9CA]' 
-                      : 'border-transparent text-gray-300 hover:text-white'
+                      ? 'border-[#D3D5D6] text-[#D3D5D6]' 
+                      : 'border-transparent text-gray-300 hover:text-white hover:border-gray-500'
                     }`}
                   >
                     {link.label}
@@ -110,21 +107,24 @@ function App() {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* lg:flex a md:flex helyett */}
               <button 
                 onClick={handleProfileClick}
-                className="hidden md:flex items-center text-sm font-medium text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                className="hidden lg:flex items-center text-sm font-medium text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-colors cursor-pointer"
                 title="Profil megtekintése"
               >
-                <UserIcon size={16} className="mr-2 text-[#C8C9CA]" />
+                <UserIcon size={16} className="mr-2 text-[#D3D5D6]" />
                 {user.name} ({user.role === 'admin' ? 'Admin' : user.role === 'operator' ? 'Operátor' : 'Sofőr'})
               </button>
               
-              <button onClick={handleLogout} className="hidden md:block text-gray-400 hover:text-red-400" title="Kijelentkezés">
+              {/* lg:block a md:block helyett */}
+              <button onClick={handleLogout} className="hidden lg:block text-gray-400 hover:text-[#D3D5D6] hover:bg-white/10 p-2 rounded-full transition-colors" title="Kijelentkezés">
                 <LogOut size={20} />
               </button>
 
+              {/* lg:hidden a md:hidden helyett */}
               <button 
-                className="md:hidden p-2 text-white"
+                className="lg:hidden p-2 text-white hover:bg-white/10 rounded-lg"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -133,25 +133,25 @@ function App() {
           </div>
         </div>
 
-        {/* Mobil lenyíló menü (világos téma, de az aktív a kékünk lesz) */}
+        {/* lg:hidden a md:hidden helyett */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 pt-2 pb-4 space-y-1 shadow-lg">
+          <div className="lg:hidden bg-[#13395C] border-t border-white/10 px-4 pt-2 pb-4 space-y-1 shadow-lg">
             {navLinks.map(link => (
               <Link 
                 key={link.to} 
                 to={link.to} 
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  location.pathname === link.to ? 'text-[#001A33] bg-blue-50' : 'text-gray-700 hover:text-[#001A33] hover:bg-gray-50'
+                  location.pathname === link.to ? 'text-[#0B2C4B] bg-[#D3D5D6]' : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-gray-100 mt-4 pt-4">
-              <button onClick={handleProfileClick} className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-[#001A33]">
+            <div className="border-t border-white/10 mt-4 pt-4">
+              <button onClick={handleProfileClick} className="w-full text-left px-3 py-2 text-base font-medium text-gray-300 hover:text-white">
                 Profil beállítások ({user.name})
               </button>
-              <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-base font-medium text-red-600 hover:bg-red-50">
+              <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-base font-medium text-[#D3D5D6] hover:bg-white/10">
                 Kijelentkezés
               </button>
             </div>

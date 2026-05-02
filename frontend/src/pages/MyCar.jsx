@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Car, AlertTriangle, Ticket, CheckCircle, History, Gauge, LayoutGrid, Info } from 'lucide-react';
-// ÚJ: Beimportáljuk az API segédfüggvényt
+import { Car, AlertTriangle, Ticket, CheckCircle, History, Gauge, LayoutGrid, Info, X } from 'lucide-react';
+import toast from 'react-hot-toast'; // ÚJ: Értesítések
 import { apiFetch } from '../api';
 
 const MyCar = ({ user }) => {
@@ -19,19 +19,19 @@ const MyCar = ({ user }) => {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      // ÚJ: Cserélve apiFetch-re
       const res = await apiFetch(`/my-cars/${user.id}`);
       const data = await res.json();
       if (data.success && data.vehicles.length > 0) {
         setVehicles(data.vehicles);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      toast.error('Hiba a járműadatok betöltésekor!'); 
+    }
     setLoading(false);
   };
 
   const fetchVehicleDetails = async (vehicleId) => {
     try {
-      // ÚJ: Cserélve apiFetch-re
       const [sRes, lRes] = await Promise.all([
         apiFetch(`/vehicles/${vehicleId}/stickers`),
         apiFetch(`/vehicles/${vehicleId}/logs`)
@@ -39,7 +39,9 @@ const MyCar = ({ user }) => {
       setStickers(await sRes.json());
       setLogs(await lRes.json());
       setNewKm(vehicles[currentIndex].current_km || '');
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+    }
   };
 
   useEffect(() => { fetchInitialData(); }, [user]);
@@ -47,28 +49,35 @@ const MyCar = ({ user }) => {
 
   const handleUpdateKm = async () => {
     if (!newKm || parseInt(newKm) < currentVehicle.current_km) {
-      alert("Hiba: Az új kilométer nem lehet kevesebb a jelenleginél!");
+      toast.error("Hiba: Az új kilométer nem lehet kevesebb a jelenleginél!");
       return;
     }
-    // ÚJ: Cserélve apiFetch-re
-    await apiFetch(`/vehicles/${currentVehicle.id}/km`, {
-      method: 'PUT',
-      body: JSON.stringify({ current_km: newKm })
-    });
-    alert("Kilométeróra frissítve!");
-    fetchInitialData();
+    try {
+      await apiFetch(`/vehicles/${currentVehicle.id}/km`, {
+        method: 'PUT',
+        body: JSON.stringify({ current_km: newKm })
+      });
+      toast.success("Kilométeróra állása sikeresen frissítve!");
+      fetchInitialData();
+    } catch (err) {
+      toast.error("Nem sikerült frissíteni a kilométerórát.");
+    }
   };
 
   const handleReportError = async (e) => {
     e.preventDefault();
-    // ÚJ: Cserélve apiFetch-re
-    await apiFetch(`/vehicles/${currentVehicle.id}/service`, {
-      method: 'POST',
-      body: JSON.stringify({ description: errorDesc })
-    });
-    setIsErrorModalOpen(false);
-    setErrorDesc('');
-    fetchInitialData();
+    try {
+      await apiFetch(`/vehicles/${currentVehicle.id}/service`, {
+        method: 'POST',
+        body: JSON.stringify({ description: errorDesc })
+      });
+      toast.success("Hibabejelentés elküldve a Szerviztáblára!");
+      setIsErrorModalOpen(false);
+      setErrorDesc('');
+      fetchInitialData();
+    } catch (err) {
+      toast.error("Nem sikerült elküldeni a bejelentést.");
+    }
   };
 
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse font-medium">Járműadatok betöltése...</div>;
@@ -77,10 +86,9 @@ const MyCar = ({ user }) => {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       
-      {/* Járműválasztó Rács (Nyilak helyett) */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
         <div className="flex items-center gap-2 mb-4 text-gray-800 font-bold">
-          <LayoutGrid size={20} className="text-blue-600" />
+          <LayoutGrid size={20} className="text-[#13395C]" />
           <h3>Válassz járművet:</h3>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -90,7 +98,7 @@ const MyCar = ({ user }) => {
               onClick={() => setCurrentIndex(index)}
               className={`px-4 py-2 rounded-xl border-2 transition-all font-mono font-bold text-sm ${
                 currentIndex === index 
-                ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' 
+                ? 'border-[#13395C] bg-[#D3D5D6]/30 text-[#0B2C4B] shadow-sm' 
                 : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-300 hover:bg-white'
               }`}
             >
@@ -100,7 +108,6 @@ const MyCar = ({ user }) => {
         </div>
       </div>
 
-      {/* Jármű Részletes Adatlap */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <div className="lg:col-span-2 space-y-6">
@@ -109,7 +116,7 @@ const MyCar = ({ user }) => {
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-3xl font-black text-gray-900 leading-tight">{currentVehicle.brand} {currentVehicle.model}</h3>
+                  <h3 className="text-3xl font-black text-[#0B2C4B] leading-tight">{currentVehicle.brand} {currentVehicle.model}</h3>
                   <p className="text-gray-500 font-medium">{currentVehicle.category} kategória • {currentVehicle.fuel_type}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -120,7 +127,6 @@ const MyCar = ({ user }) => {
                 </div>
               </div>
 
-              {/* Bővített Technikai Adatok Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-6 gap-x-4 border-t border-gray-100 pt-6">
                 <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Rendszám</p><p className="font-mono font-bold text-gray-800">{currentVehicle.license_plate}</p></div>
                 <div><p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Évjárat</p><p className="font-bold text-gray-800">{currentVehicle.year_of_manufacture || '-'}</p></div>
@@ -133,20 +139,19 @@ const MyCar = ({ user }) => {
             </div>
           </div>
 
-          {/* Gyorsműveletek: KM és Hiba */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-blue-100 flex items-center gap-4">
-              <div className="p-3 bg-blue-600 text-white rounded-xl shadow-blue-200 shadow-lg"><Gauge size={24}/></div>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#D3D5D6] flex items-center gap-4">
+              <div className="p-3 bg-[#13395C] text-white rounded-xl shadow-[#D3D5D6] shadow-lg"><Gauge size={24}/></div>
               <div className="flex-grow">
-                <label className="block text-[10px] font-black text-blue-600 uppercase tracking-widest">Kilométeróra frissítése</label>
+                <label className="block text-[10px] font-black text-[#13395C] uppercase tracking-widest">Kilométeróra frissítése</label>
                 <div className="flex gap-2 mt-1">
                   <input 
                     type="number" 
                     value={newKm} 
                     onChange={e => setNewKm(e.target.value)} 
-                    className="w-full text-lg border-b-2 border-blue-200 outline-none focus:border-blue-600 font-black text-gray-800 transition-colors" 
+                    className="w-full text-lg border-b-2 border-[#D3D5D6] outline-none focus:border-[#13395C] font-black text-[#0B2C4B] transition-colors" 
                   />
-                  <button onClick={handleUpdateKm} className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-700">OK</button>
+                  <button onClick={handleUpdateKm} className="bg-[#13395C] text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-[#0B2C4B] transition-colors">OK</button>
                 </div>
               </div>
             </div>
@@ -165,10 +170,9 @@ const MyCar = ({ user }) => {
           </div>
         </div>
 
-        {/* Oldalsáv: Matricák és Előzmények */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h4 className="font-bold flex items-center gap-2 text-gray-800 mb-4 border-b border-gray-50 pb-2"><Ticket className="text-blue-500" size={18}/> Aktív matricák</h4>
+            <h4 className="font-bold flex items-center gap-2 text-[#0B2C4B] mb-4 border-b border-gray-50 pb-2"><Ticket className="text-[#13395C]" size={18}/> Aktív matricák</h4>
             {stickers.length === 0 ? <p className="text-xs text-gray-400 italic">Nincs érvényes matrica.</p> : (
               <div className="space-y-2">
                 {stickers.map(s => (
@@ -182,7 +186,7 @@ const MyCar = ({ user }) => {
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <h4 className="font-bold flex items-center gap-2 text-gray-800 mb-4 border-b border-gray-50 pb-2"><History className="text-purple-500" size={18}/> Utolsó 5 bejelentés</h4>
+            <h4 className="font-bold flex items-center gap-2 text-[#0B2C4B] mb-4 border-b border-gray-50 pb-2"><History className="text-[#13395C]" size={18}/> Utolsó 5 bejelentés</h4>
             <div className="space-y-3">
               {logs.length === 0 ? <p className="text-xs text-gray-400 italic">Nincs korábbi bejelentés.</p> : logs.map(log => (
                 <div key={log.id} className="text-xs group">
@@ -199,11 +203,14 @@ const MyCar = ({ user }) => {
 
       </div>
 
-      {/* Hiba Modal */}
       {isErrorModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-gray-100">
-            <h3 className="text-2xl font-black text-gray-800 mb-2 flex items-center gap-2"><AlertTriangle className="text-amber-500" /> Hiba leírása</h3>
+            <div className="flex justify-between items-center mb-2">
+               <h3 className="text-2xl font-black text-gray-800 flex items-center gap-2"><AlertTriangle className="text-amber-500" /> Hiba leírása</h3>
+               <button onClick={() => setIsErrorModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={24} /></button>
+            </div>
+            
             <p className="text-sm text-gray-500 mb-6 font-medium">A tapasztalt hibajelenség részletes leírása.</p>
             <textarea required rows="4" value={errorDesc} onChange={e => setErrorDesc(e.target.value)} className="w-full p-4 border-2 border-gray-100 rounded-2xl mb-6 outline-none focus:border-amber-500 transition-colors font-medium text-gray-700" placeholder="Pl: Indításkor kékes füst, vagy kopogás elölről..." />
             <div className="flex gap-3">

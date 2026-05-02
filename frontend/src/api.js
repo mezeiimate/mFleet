@@ -1,4 +1,3 @@
-// frontend/src/api.js
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export const apiFetch = async (endpoint, options = {}) => {
@@ -17,15 +16,16 @@ export const apiFetch = async (endpoint, options = {}) => {
     headers,
   });
 
-  // Ha lejárt vagy érvénytelen a token
+  // Ha lejárt a token, dobjon ki, DE a login oldali hibás jelszónál NE frissítse az oldalt!
   if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('fleet_user');
-    window.location.href = '/login'; 
-    throw new Error('A munkamenet lejárt, kérlek jelentkezz be újra!');
+    if (endpoint !== '/login') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('fleet_user');
+      window.location.href = '/login'; 
+    }
   }
 
-  // ÚJ LOGIKA (AI javaslat): Ha valami más hiba van (pl. 400, 404, 500)
+  // Ha valami más hiba van (pl. 400, 404, 500, vagy 401 a loginon)
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     throw new Error(errData.error || errData.message || 'Szerverhiba történt.');
