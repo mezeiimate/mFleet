@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:15
+    container_name: fleet_db_new
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: fleet_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data_new:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: fleet_backend_new
+    ports:
+      - "5001:5000"
+    depends_on:
+      - db
+    environment:
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=fleet_db
+      - DB_HOST=db
+      - PORT=5000
+
+  frontend:
+    build: ./frontend
+    container_name: fleet_frontend_new
+    ports:
+      - "5174:5173"
+    depends_on:
+      - backend
+
+volumes:
+  db_data_new:
