@@ -37,7 +37,6 @@ const authenticateToken = (req, res, next) => {
 // --- 2. KAPUŐR: Szerepkör alapú jogosultságkezelés (RBAC) ---
 const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    // Ellenőrizzük, hogy a bejelentkezett user szerepköre benne van-e az engedélyezett listában
     if (!req.user || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Nincs jogosultságod ehhez a művelethez!' });
     }
@@ -81,8 +80,8 @@ app.post('/api/login', async (req, res) => {
 
 
 // --- FELHASZNÁLÓK (USERS) ---
-// Csak Admin listázhat, hozhat létre, vagy törölhet felhasználót
-app.get('/api/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+// Az admin ÉS az operátor is lekérheti (hogy lássák a sofőröket a járműveknél)
+app.get('/api/users', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username, name, role FROM users ORDER BY name ASC');
     res.json(result.rows);
@@ -100,7 +99,12 @@ app.post('/api/users', authenticateToken, authorizeRoles('admin'), async (req, r
       [username, hashedPassword, name, role]
     );
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    if (err.code === '23505' || err.message.includes('users_username_key')) {
+      return res.status(400).json({ error: 'Ez a felhasználónév már foglalt! Kérlek, válassz másikat.' });
+    }
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.delete('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
@@ -120,7 +124,6 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 
   let { username, name, role, password } = req.body;
   
-  // Ha nem admin az illető, nem változtathatja meg a saját szerepkörét
   if (req.user.role !== 'admin') {
     role = req.user.role; 
   }
@@ -140,7 +143,12 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
       );
     }
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    if (err.code === '23505' || err.message.includes('users_username_key')) {
+      return res.status(400).json({ error: 'Ez a felhasználónév már foglalt! Kérlek, válassz másikat.' });
+    }
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 
@@ -169,7 +177,12 @@ app.post('/api/vehicles', authenticateToken, authorizeRoles('admin', 'operator')
       [license_plate, brand, model, year_of_manufacture, vin, fuel_type, transmission, engine_capacity, current_km, technical_exam_until, user_id, category, status]
     );
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    if (err.code === '23505' || err.message.includes('vehicles_license_plate_key')) {
+      return res.status(400).json({ error: 'Ez a rendszám már szerepel a rendszerben!' });
+    }
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 app.put('/api/vehicles/:id', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
@@ -180,7 +193,12 @@ app.put('/api/vehicles/:id', authenticateToken, authorizeRoles('admin', 'operato
       [license_plate, brand, model, year_of_manufacture, vin, fuel_type, transmission, engine_capacity, current_km, technical_exam_until, user_id, category, status, req.params.id]
     );
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    if (err.code === '23505' || err.message.includes('vehicles_license_plate_key')) {
+      return res.status(400).json({ error: 'Ez a rendszám már szerepel a rendszerben!' });
+    }
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
 // Ezt a sofőrök is elérhetik, de csak a saját autójukat!
