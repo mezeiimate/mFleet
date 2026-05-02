@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Wrench, Search, CheckCircle, Clock, AlertTriangle, Check, Download, Trash2, Tag, Activity, Filter, ChevronDown, Square, CheckSquare, X, Archive, Receipt } from 'lucide-react';
+// ÚJ: Beimportáljuk a központi API hívó függvényt
+import { apiFetch } from '../api';
 
 const ServiceBoard = () => {
   const [logs, setLogs] = useState([]);
@@ -27,12 +29,17 @@ const ServiceBoard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // ÚJ: Cserélve apiFetch-re
       const [logsRes, vehRes] = await Promise.all([
-        fetch('http://localhost:5001/api/service-logs').then(r => r.json()),
-        fetch('http://localhost:5001/api/vehicles').then(r => r.json())
+        apiFetch('/service-logs').then(r => r.json()),
+        apiFetch('/vehicles').then(r => r.json())
       ]);
       setLogs(logsRes); setVehicles(vehRes);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => {
@@ -50,7 +57,11 @@ const ServiceBoard = () => {
   const handleResolve = async (e) => {
     e.preventDefault();
     try {
-      await fetch(`http://localhost:5001/api/service-logs/${selectedLog.id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Kész', vehicle_id: selectedLog.vehicle_id, cost: parseInt(repairCost) || 0 }) });
+      // ÚJ: Cserélve apiFetch-re
+      await apiFetch(`/service-logs/${selectedLog.id}/status`, { 
+        method: 'PUT', 
+        body: JSON.stringify({ status: 'Kész', vehicle_id: selectedLog.vehicle_id, cost: parseInt(repairCost) || 0 }) 
+      });
       fetchData(); closeResolveModal();
     } catch (err) { alert('Hiba a lezárás során!'); }
   };
@@ -58,7 +69,8 @@ const ServiceBoard = () => {
   const handleDeleteItem = async (id) => {
     if (window.confirm(`Biztosan törlöd ezt a tételt a Pénzügyi Történetből? (Ezzel törlöd az adott költséget a nyilvántartásból!)`)) {
       try {
-        await fetch(`http://localhost:5001/api/service-logs/${id}`, { method: 'DELETE' });
+        // ÚJ: Cserélve apiFetch-re
+        await apiFetch(`/service-logs/${id}`, { method: 'DELETE' });
         fetchData();
       } catch (err) { alert('Hiba a törléskor!'); }
     }

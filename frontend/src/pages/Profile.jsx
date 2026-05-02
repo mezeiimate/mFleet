@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { User, KeyRound, Save, Shield, BadgeCheck, AlertCircle } from 'lucide-react';
+// ÚJ: Beimportáljuk az API segédfüggvényt
+import { apiFetch } from '../api';
 
 const Profile = ({ user, onUserUpdate }) => {
   const [formData, setFormData] = useState({
@@ -20,9 +22,9 @@ const Profile = ({ user, onUserUpdate }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5001/api/users/${user.id}`, {
+      // ÚJ: Cserélve apiFetch-re (a headereket automatikusan kezeli az api.js)
+      const response = await apiFetch(`/users/${user.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: user.username,
           name: formData.name,

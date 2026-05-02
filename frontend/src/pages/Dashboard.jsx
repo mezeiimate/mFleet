@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Car, Wrench, AlertTriangle, ShieldAlert, Clock, CheckCircle, Fuel, LayoutGrid, Calendar } from 'lucide-react';
+// ÚJ: Beimportáljuk a központi API hívó függvényünket
+import { apiFetch } from '../api';
 
 const Dashboard = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -15,14 +17,16 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
+        // ÚJ: A beépített fetch helyett az apiFetch-et használjuk, rövidített végpontokkal
         const [vehRes, logRes] = await Promise.all([
-          fetch('http://localhost:5001/api/vehicles').then(r => r.json()),
-          fetch('http://localhost:5001/api/service-logs').then(r => r.json())
+          apiFetch('/vehicles').then(r => r.json()),
+          apiFetch('/service-logs').then(r => r.json())
         ]);
 
         const activeVehicles = vehRes.filter(v => v.status !== 'Archivált');
         const stickersPromises = activeVehicles.map(v => 
-          fetch(`http://localhost:5001/api/vehicles/${v.id}/stickers`).then(r => r.json()).then(stickers => ({ ...v, stickers }))
+          // ÚJ: Itt is lecseréljük az url-t
+          apiFetch(`/vehicles/${v.id}/stickers`).then(r => r.json()).then(stickers => ({ ...v, stickers }))
         );
         const vehiclesWithStickers = await Promise.all(stickersPromises);
 
@@ -97,7 +101,12 @@ const Dashboard = () => {
           }
         });
         setAlerts(newAlerts.sort((a, b) => b.priority - a.priority));
-      } catch (err) { console.error("Hiba:", err); } finally { setLoading(false); }
+      } catch (err) { 
+        console.error("Hiba:", err); 
+        // Hibakezelés (ai javaslat): Ha 401 vagy 403 miatt szállt el, a catch elkapja
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchDashboardData();
   }, []);

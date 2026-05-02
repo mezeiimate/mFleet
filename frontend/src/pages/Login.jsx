@@ -22,10 +22,13 @@ const Login = ({ onLogin }) => {
       const data = await response.json();
 
       if (data.success) {
-        onLogin(data.user);
+        // --- ÚJ LOGIKA: A token elmentése a böngészőbe ---
+        localStorage.setItem('token', data.token); // Eltároljuk a tokent!
+        
+        onLogin(data.user); // Átadjuk a user adatokat a szülő komponensnek (App.jsx)
         navigate('/'); 
       } else {
-        setError(data.message);
+        setError(data.message || 'Hibás bejelentkezési adatok');
       }
     } catch (err) {
       setError('Nem sikerült csatlakozni a szerverhez.');
@@ -87,9 +90,9 @@ const Login = ({ onLogin }) => {
         </form>
         
         <div className="mt-6 text-center text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">
-          <p className="font-semibold mb-2">Teszt fiókok (A jelszó megegyezik a felhasználónévvel):</p>
+          <p className="font-semibold mb-2">Teszt fiókok:</p>
           <ul className="space-y-1">
-            <li>Admin: <strong className="text-gray-700">admin</strong></li>
+            <li>Adminisztrátor: <strong className="text-gray-700">admin</strong></li>
             <li>Operátor: <strong className="text-gray-700">operator</strong></li>
             <li>Sofőr: <strong className="text-gray-700">sofor</strong></li>
           </ul>

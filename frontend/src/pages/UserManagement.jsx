@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Users, Search, Plus, Trash2, Edit, CheckCircle, UserPlus, X, Filter, ChevronDown, Square, CheckSquare } from 'lucide-react';
+// ÚJ: Beimportáljuk az API segédfüggvényt
+import { apiFetch } from '../api';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -22,10 +24,15 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/users');
+      // ÚJ: apiFetch használata
+      const res = await apiFetch('/users');
       const data = await res.json();
       setUsers(data);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { 
@@ -43,19 +50,26 @@ const UserManagement = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     const isEdit = formData.id !== null;
-    const url = isEdit ? `http://localhost:5001/api/users/${formData.id}` : 'http://localhost:5001/api/users';
+    const endpoint = isEdit ? `/users/${formData.id}` : '/users';
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+      // ÚJ: apiFetch használata (A headereket automatikusan kezeli az api.js)
+      await apiFetch(endpoint, { 
+        method, 
+        body: JSON.stringify(formData) 
+      });
       setIsModalOpen(false);
       fetchUsers();
-    } catch (err) { alert('Hiba mentéskor!'); }
+    } catch (err) { 
+      alert('Hiba mentéskor!'); 
+    }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Biztosan törlöd ezt a felhasználót?')) {
-      await fetch(`http://localhost:5001/api/users/${id}`, { method: 'DELETE' });
+      // ÚJ: apiFetch használata
+      await apiFetch(`/users/${id}`, { method: 'DELETE' });
       fetchUsers();
     }
   };

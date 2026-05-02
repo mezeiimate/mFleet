@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Car, AlertTriangle, Ticket, CheckCircle, History, Gauge, LayoutGrid, Info } from 'lucide-react';
+// ÚJ: Beimportáljuk az API segédfüggvényt
+import { apiFetch } from '../api';
 
 const MyCar = ({ user }) => {
   const [vehicles, setVehicles] = useState([]);
@@ -17,7 +19,8 @@ const MyCar = ({ user }) => {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5001/api/my-cars/${user.id}`);
+      // ÚJ: Cserélve apiFetch-re
+      const res = await apiFetch(`/my-cars/${user.id}`);
       const data = await res.json();
       if (data.success && data.vehicles.length > 0) {
         setVehicles(data.vehicles);
@@ -28,9 +31,10 @@ const MyCar = ({ user }) => {
 
   const fetchVehicleDetails = async (vehicleId) => {
     try {
+      // ÚJ: Cserélve apiFetch-re
       const [sRes, lRes] = await Promise.all([
-        fetch(`http://localhost:5001/api/vehicles/${vehicleId}/stickers`),
-        fetch(`http://localhost:5001/api/vehicles/${vehicleId}/logs`)
+        apiFetch(`/vehicles/${vehicleId}/stickers`),
+        apiFetch(`/vehicles/${vehicleId}/logs`)
       ]);
       setStickers(await sRes.json());
       setLogs(await lRes.json());
@@ -46,9 +50,9 @@ const MyCar = ({ user }) => {
       alert("Hiba: Az új kilométer nem lehet kevesebb a jelenleginél!");
       return;
     }
-    await fetch(`http://localhost:5001/api/vehicles/${currentVehicle.id}/km`, {
+    // ÚJ: Cserélve apiFetch-re
+    await apiFetch(`/vehicles/${currentVehicle.id}/km`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ current_km: newKm })
     });
     alert("Kilométeróra frissítve!");
@@ -57,9 +61,9 @@ const MyCar = ({ user }) => {
 
   const handleReportError = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:5001/api/vehicles/${currentVehicle.id}/service`, {
+    // ÚJ: Cserélve apiFetch-re
+    await apiFetch(`/vehicles/${currentVehicle.id}/service`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: errorDesc })
     });
     setIsErrorModalOpen(false);

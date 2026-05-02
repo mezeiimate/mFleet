@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, User as UserIcon, Menu, X } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
@@ -19,14 +19,21 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // --- ÚJ: Hamburger menü automatikus bezárása útvonal váltáskor ---
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const handleLogin = (userData) => {
     setUser(userData);
     localStorage.setItem('fleet_user', JSON.stringify(userData));
+    // A token mentését már a Login.jsx elintézte!
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('fleet_user');
+    localStorage.removeItem('token'); // ÚJ: A token törlése is megtörténik!
   };
 
   const handleProfileClick = () => {
@@ -35,7 +42,6 @@ function App() {
     } else {
       navigate('/profil');
     }
-    setIsMobileMenuOpen(false);
   };
 
   if (!user) {
@@ -122,7 +128,7 @@ function App() {
               <Link 
                 key={link.to} 
                 to={link.to} 
-                onClick={() => setIsMobileMenuOpen(false)}
+                // A onClick itt már nem is kell, mert a fenti useEffect megoldja a zárást!
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
               >
                 {link.label}
@@ -142,7 +148,7 @@ function App() {
 
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Routes>
-                    {/* Admin / Operátor útvonalak */}
+            {/* Admin / Operátor útvonalak */}
             {(user.role === 'admin' || user.role === 'operator') && (
                 <>
                 <Route path="/" element={<Dashboard />} />

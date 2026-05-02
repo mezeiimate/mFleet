@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Car, Plus, Search, Edit, AlertTriangle, Info, X, Ticket, CheckCircle, Filter, ChevronDown, Square, CheckSquare, Archive, RefreshCw, Trash2 } from 'lucide-react';
+// ÚJ: Beimportáljuk a központi API hívó függvényünket
+import { apiFetch } from '../api';
 
 const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -35,11 +37,11 @@ const VehicleList = () => {
 
   const fetchData = () => {
     setLoading(true);
-    // BIZTONSÁGOS ADATBETÖLTÉS
+    // ÚJ: BIZTONSÁGOS ADATBETÖLTÉS apiFetch-el
     Promise.all([
-      fetch('http://localhost:5001/api/vehicles').then(res => res.json()).catch(() => []),
-      fetch('http://localhost:5001/api/users').then(res => res.json()).catch(() => []),
-      fetch('http://localhost:5001/api/sticker-types').then(res => res.json()).catch(() => [])
+      apiFetch('/vehicles').then(res => res.json()).catch(() => []),
+      apiFetch('/users').then(res => res.json()).catch(() => []),
+      apiFetch('/sticker-types').then(res => res.json()).catch(() => [])
     ]).then(([vData, uData, stData]) => {
       setVehicles(Array.isArray(vData) ? vData : []); 
       setUsers(Array.isArray(uData) ? uData.filter(u => u && u.role === 'driver') : []); 
@@ -125,7 +127,11 @@ const VehicleList = () => {
     if (!payload.user_id) payload.user_id = null;
 
     try {
-      await fetch(isEdit ? `http://localhost:5001/api/vehicles/${formData.id}` : 'http://localhost:5001/api/vehicles', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      // ÚJ: Cserélve apiFetch-re
+      await apiFetch(isEdit ? `/vehicles/${formData.id}` : '/vehicles', { 
+        method: isEdit ? 'PUT' : 'POST', 
+        body: JSON.stringify(payload) 
+      });
       closeModal(); 
       fetchData();
     } catch (err) {
@@ -138,7 +144,11 @@ const VehicleList = () => {
     if (v.status === 'Szervizben') return alert('Szervizben lévő autót nem lehet archiválni!');
     if (window.confirm(`Biztosan ${v.status === 'Archivált' ? 'visszaállítod ezt a járművet Aktív státuszba' : 'archiválod ezt a járművet'}?`)) {
       const payload = { ...v, status: v.status === 'Archivált' ? 'Aktív' : 'Archivált', technical_exam_until: v.technical_exam_until ? v.technical_exam_until.split('T')[0] : null };
-      await fetch(`http://localhost:5001/api/vehicles/${v.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      // ÚJ: Cserélve apiFetch-re
+      await apiFetch(`/vehicles/${v.id}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(payload) 
+      });
       fetchData();
     }
   };
@@ -146,7 +156,11 @@ const VehicleList = () => {
   const handleReportError = async (e) => {
     e.preventDefault();
     if (!selectedVehicle) return;
-    await fetch(`http://localhost:5001/api/vehicles/${selectedVehicle.id}/service`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: errorDesc }) });
+    // ÚJ: Cserélve apiFetch-re
+    await apiFetch(`/vehicles/${selectedVehicle.id}/service`, { 
+      method: 'POST', 
+      body: JSON.stringify({ description: errorDesc }) 
+    });
     closeModal(); fetchData();
   };
 
@@ -169,13 +183,18 @@ const VehicleList = () => {
   const handleAddSticker = async (e) => {
     e.preventDefault();
     if (!selectedVehicle) return;
-    await fetch(`http://localhost:5001/api/vehicles/${selectedVehicle.id}/stickers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(stickerData) });
+    // ÚJ: Cserélve apiFetch-re
+    await apiFetch(`/vehicles/${selectedVehicle.id}/stickers`, { 
+      method: 'POST', 
+      body: JSON.stringify(stickerData) 
+    });
     openDetails(selectedVehicle);
   };
 
   const handleDeleteSticker = async (stickerId) => {
     if (window.confirm('Biztosan törlöd ezt a matricát az autóról? (Megjegyzés: a pénzügyi történetben a költsége megmarad!)')) { 
-      await fetch(`http://localhost:5001/api/vehicle-stickers/${stickerId}`, { method: 'DELETE' }); 
+      // ÚJ: Cserélve apiFetch-re
+      await apiFetch(`/vehicle-stickers/${stickerId}`, { method: 'DELETE' }); 
       openDetails(selectedVehicle); 
     }
   };
@@ -186,7 +205,8 @@ const VehicleList = () => {
       const safeStickers = Array.isArray(vehicleStickers) ? vehicleStickers : [];
       const expired = safeStickers.filter(vs => new Date(vs.valid_until) < todayStr);
       for (let st of expired) {
-        if (st && st.id) await fetch(`http://localhost:5001/api/vehicle-stickers/${st.id}`, { method: 'DELETE' });
+        // ÚJ: Cserélve apiFetch-re
+        if (st && st.id) await apiFetch(`/vehicle-stickers/${st.id}`, { method: 'DELETE' });
       }
       openDetails(selectedVehicle);
     }
@@ -216,7 +236,8 @@ const VehicleList = () => {
     if (!v) return;
     setSelectedVehicle(v); 
     try {
-      const res = await fetch(`http://localhost:5001/api/vehicles/${v.id}/stickers`); 
+      // ÚJ: Cserélve apiFetch-re
+      const res = await apiFetch(`/vehicles/${v.id}/stickers`); 
       const data = await res.json();
       setVehicleStickers(Array.isArray(data) ? data : []);
     } catch {

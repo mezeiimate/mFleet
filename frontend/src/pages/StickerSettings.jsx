@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Ticket, Plus, Search, Edit, Trash2, X, Filter, ChevronDown, Square, CheckSquare } from 'lucide-react';
+// ÚJ: Beimportáljuk az API segédfüggvényt
+import { apiFetch } from '../api';
 
 const StickerSettings = () => {
   const [stickers, setStickers] = useState([]);
@@ -24,10 +26,15 @@ const StickerSettings = () => {
   const fetchStickers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/sticker-types');
+      // ÚJ: apiFetch használata
+      const res = await apiFetch('/sticker-types');
       const data = await res.json();
       setStickers(data);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { 
@@ -47,19 +54,26 @@ const StickerSettings = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     const isEdit = formData.id !== null;
-    const url = isEdit ? `http://localhost:5001/api/sticker-types/${formData.id}` : 'http://localhost:5001/api/sticker-types';
+    const endpoint = isEdit ? `/sticker-types/${formData.id}` : '/sticker-types';
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+      // ÚJ: apiFetch használata (A headereket automatikusan kezeli az api.js)
+      await apiFetch(endpoint, { 
+        method, 
+        body: JSON.stringify(formData) 
+      });
       setIsModalOpen(false);
       fetchStickers();
-    } catch (err) { alert('Hiba mentéskor!'); }
+    } catch (err) { 
+      alert('Hiba mentéskor!'); 
+    }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Biztosan törlöd ezt a matrica típust a katalógusból?')) {
-      await fetch(`http://localhost:5001/api/sticker-types/${id}`, { method: 'DELETE' });
+      // ÚJ: apiFetch használata
+      await apiFetch(`/sticker-types/${id}`, { method: 'DELETE' });
       fetchStickers();
     }
   };
