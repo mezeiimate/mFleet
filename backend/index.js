@@ -3,6 +3,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken'); 
+const cron = require('node-cron'); // ÚJ: Időzítő csomag importálása
 require('dotenv').config(); 
 
 const app = express();
@@ -15,6 +16,17 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'fleet_db',
   password: process.env.DB_PASSWORD || 'postgres',
   port: process.env.DB_PORT || 5432,
+});
+
+const nodemailer = require('nodemailer');
+
+// Levélküldő (Transporter) beállítása a Gmail-hez
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
 });
 
 // --- 1. KAPUŐR: Token ellenőrzése (Beléptetés) ---
@@ -65,7 +77,7 @@ app.post('/api/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, role: user.role, username: user.username },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' }
+      { expiresIn: '1h' }
     );
 
     res.json({ 
@@ -80,7 +92,6 @@ app.post('/api/login', async (req, res) => {
 
 
 // --- FELHASZNÁLÓK (USERS) ---
-// Az admin ÉS az operátor is lekérheti (hogy lássák a sofőröket a járműveknél)
 app.get('/api/users', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username, name, role FROM users ORDER BY name ASC');
@@ -114,7 +125,6 @@ app.delete('/api/users/:id', authenticateToken, authorizeRoles('admin'), async (
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// A PUT speciális: Admin mindenkit szerkeszthet, a többiek csak saját magukat
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   const targetUserId = parseInt(req.params.id);
   
@@ -153,7 +163,6 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 
 
 // --- JÁRMŰVEK (VEHICLES) ---
-// Csak Admin és Operátor kezelheti a flottát globálisan
 app.get('/api/vehicles', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -201,7 +210,6 @@ app.put('/api/vehicles/:id', authenticateToken, authorizeRoles('admin', 'operato
   }
 });
 
-// Ezt a sofőrök is elérhetik, de csak a saját autójukat!
 app.get('/api/my-cars/:userId', authenticateToken, async (req, res) => {
   const targetUserId = parseInt(req.params.userId);
   if (req.user.role === 'driver' && req.user.id !== targetUserId) {
@@ -213,7 +221,6 @@ app.get('/api/my-cars/:userId', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Bárki frissítheti az óraállást (A sofőr a sajátján)
 app.put('/api/vehicles/:id/km', authenticateToken, async (req, res) => {
   const { current_km } = req.body;
   try {
@@ -225,7 +232,6 @@ app.put('/api/vehicles/:id/km', authenticateToken, async (req, res) => {
 
 
 // --- SZERVIZNAPLÓ (SERVICE LOGS) ---
-// Szerviztáblát csak az Admin és az Operátor látja
 app.get('/api/service-logs', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
   try {
     const result = await pool.query(`SELECT sl.*, v.license_plate, v.brand, v.model FROM service_logs sl JOIN vehicles v ON sl.vehicle_id = v.id ORDER BY sl.created_at DESC`);
@@ -267,7 +273,6 @@ app.delete('/api/service-logs/:id', authenticateToken, authorizeRoles('admin', '
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// A konkrét autó szerviz előzményeit és a hibabejelentést a sofőr is elérheti
 app.get('/api/vehicles/:id/logs', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM service_logs WHERE vehicle_id = $1 ORDER BY created_at DESC LIMIT 5', [req.params.id]);
@@ -275,13 +280,52 @@ app.get('/api/vehicles/:id/logs', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Hibabejelentés rögzítése és e-mail küldés (Javított porttal és helyesírással)
 app.post('/api/vehicles/:id/service', authenticateToken, async (req, res) => {
+  const vehicleId = req.params.id;
   const { description } = req.body;
+  const userId = req.user.id;
+
   try {
-    await pool.query('INSERT INTO service_logs (vehicle_id, description, status) VALUES ($1, $2, $3)', [req.params.id, description, 'Folyamatban']);
-    await pool.query('UPDATE vehicles SET status = $1 WHERE id = $2', ['Szervizben', req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    const result = await pool.query(
+      'INSERT INTO service_logs (vehicle_id, user_id, description, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [vehicleId, userId, description, 'Folyamatban']
+    );
+
+    await pool.query(
+      'UPDATE vehicles SET status = $1 WHERE id = $2',
+      ['Szervizben', vehicleId]
+    );
+
+    const vehicleResult = await pool.query('SELECT license_plate, brand, model FROM vehicles WHERE id = $1', [vehicleId]);
+    const vehicle = vehicleResult.rows[0];
+
+    const mailOptions = {
+      from: `"mFleet rendszer" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: `⚠️ Új hibabejelentés: ${vehicle.license_plate}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #d97706;">Új hibabejelentés érkezett!</h2>
+          <p><strong>Rendszám:</strong> ${vehicle.license_plate}</p>
+          <p><strong>Jármű:</strong> ${vehicle.brand} ${vehicle.model}</p>
+          <p><strong>Bejelentő:</strong> ${req.user.username}</p>
+          <hr />
+          <p><strong>Hiba leírása:</strong></p>
+          <p style="background: #f9fafb; padding: 15px; border-left: 4px solid #d97706;"><i>${description}</i></p>
+          <br/>
+          <a href="http://192.168.0.32:5174/szerviz" style="background: #13395c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Megnyitás a szerviztáblán</a>
+        </div>
+      `
+    };
+
+    transporter.sendMail(mailOptions).catch(err => console.error("Hiba a levélküldésnél:", err));
+
+    res.json({ success: true, log: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Szerverhiba történt' });
+  }
 });
 
 
@@ -316,7 +360,6 @@ app.delete('/api/sticker-types/:id', authenticateToken, authorizeRoles('admin', 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// A matricákat rátenni vagy levenni autóról csak admin/operátor tud
 app.post('/api/vehicles/:id/stickers', authenticateToken, authorizeRoles('admin', 'operator'), async (req, res) => {
   const { sticker_type_id, valid_until, purchase_price } = req.body;
   try {
@@ -340,7 +383,6 @@ app.delete('/api/vehicle-stickers/:id', authenticateToken, authorizeRoles('admin
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// De az autó érvényes matricáit a sofőr is látja a "Saját autóm" nézetben
 app.get('/api/vehicles/:id/stickers', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -350,6 +392,85 @@ app.get('/api/vehicles/:id/stickers', authenticateToken, async (req, res) => {
     `, [req.params.id]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// --- AUTOMATIKUS NAPI JELENTÉS (CRON JOB) ---
+// Ez a kód minden reggel 8:00-kor lefut automatikusan
+cron.schedule('0 8 * * *', async () => {
+  try {
+    console.log('⏰ Napi lejárati ellenőrzés futtatása...');
+
+    // 1. Műszaki vizsgák lekérdezése, amik 30 napon belül lejárnak (vagy lejártak)
+    const examsResult = await pool.query(`
+      SELECT license_plate, brand, model, technical_exam_until 
+      FROM vehicles 
+      WHERE status != 'Archivált' 
+        AND technical_exam_until <= CURRENT_DATE + INTERVAL '30 days'
+      ORDER BY technical_exam_until ASC
+    `);
+
+    // 2. Matricák lekérdezése, amik 7 napon belül lejárnak (vagy lejártak)
+    const stickersResult = await pool.query(`
+      SELECT v.license_plate, st.name, st.territory, vs.valid_until
+      FROM vehicle_stickers vs
+      JOIN vehicles v ON vs.vehicle_id = v.id
+      JOIN sticker_types st ON vs.sticker_type_id = st.id
+      WHERE v.status != 'Archivált' 
+        AND vs.valid_until <= CURRENT_DATE + INTERVAL '7 days'
+      ORDER BY vs.valid_until ASC
+    `);
+
+    const exams = examsResult.rows;
+    const stickers = stickersResult.rows;
+
+    // Ha nincs közeledő lejárat, befejezzük a futást, nem spammelünk
+    if (exams.length === 0 && stickers.length === 0) {
+      console.log('✅ Nincs közeledő lejárat, e-mail kihagyva.');
+      return;
+    }
+
+    // Levél HTML tartalmának összeállítása
+    let htmlContent = `<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+      <h2 style="color: #0B2C4B;">Napi mFleet jelentés</h2>
+      <p>Az alábbi aktív járműveknél a közeljövőben lejár (vagy már lejárt) valamilyen dokumentum:</p>`;
+
+    if (exams.length > 0) {
+      htmlContent += `<h3 style="color: #d97706; border-bottom: 2px solid #fcd34d; padding-bottom: 5px;">Műszaki vizsgák (30 napon belül)</h3><ul>`;
+      exams.forEach(v => {
+        const dateStr = new Date(v.technical_exam_until).toLocaleDateString('hu-HU');
+        htmlContent += `<li style="margin-bottom: 5px;"><strong>${v.license_plate}</strong> (${v.brand} ${v.model}) - Lejár: <strong style="color: #d97706;">${dateStr}</strong></li>`;
+      });
+      htmlContent += `</ul>`;
+    }
+
+    if (stickers.length > 0) {
+      htmlContent += `<h3 style="color: #dc2626; border-bottom: 2px solid #fca5a5; padding-bottom: 5px;">Autópálya matricák (7 napon belül)</h3><ul>`;
+      stickers.forEach(s => {
+        const dateStr = new Date(s.valid_until).toLocaleDateString('hu-HU');
+        htmlContent += `<li style="margin-bottom: 5px;"><strong>${s.license_plate}</strong> - ${s.name} (${s.territory}) - Lejár: <strong style="color: #dc2626;">${dateStr}</strong></li>`;
+      });
+      htmlContent += `</ul>`;
+    }
+
+    htmlContent += `
+      <br/>
+      <a href="http://192.168.0.32:5174/" style="background: #13395c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Megnyitás az mFleet-ben</a>
+    </div>`;
+
+    const mailOptions = {
+      from: `"mFleet rendszer" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: `📊 mFleet: Napi lejárati jelentés`,
+      html: htmlContent
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('📧 Napi jelentés sikeresen elküldve!');
+
+  } catch (err) {
+    console.error('Hiba a napi jelentés futtatásakor:', err);
+  }
 });
 
 const PORT = process.env.PORT || 5000;

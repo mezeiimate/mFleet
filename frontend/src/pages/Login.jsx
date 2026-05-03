@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { KeyRound, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiFetch } from '../api';
@@ -8,13 +8,13 @@ const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ÚJ LÉPÉS: Betöltéskor megnézzük, dobott-e ki a rendszer lejárt token miatt!
   useEffect(() => {
     const authError = sessionStorage.getItem('authError');
     if (authError) {
       toast.error(authError);
-      sessionStorage.removeItem('authError'); // Miután kiírtuk, töröljük a memóriából
+      sessionStorage.removeItem('authError');
     }
   }, []);
 
@@ -31,10 +31,18 @@ const Login = ({ onLogin }) => {
 
       if (data.success) {
         localStorage.setItem('token', data.token);
-        onLogin(data.user);
         toast.success(`Üdvözlünk, ${data.user.name}!`); 
-        navigate('/'); 
+        
+        // 1. Eredeti úticél kinyerése (ha van), különben főoldal
+        const destination = location.state?.from || '/';
+        
+        // 2. Beállítjuk a usert (ettől megnyílnak a zárt útvonalak az App.jsx-ben)
+        onLogin(data.user);
+        
+        // 3. Azonnal navigálunk. A React a kettőt egyszerre hajtja végre!
+        navigate(destination, { replace: true }); 
       }
+    
     } catch (err) {
       toast.error(err.message || 'Hibás felhasználónév vagy jelszó!');
     }

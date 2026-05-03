@@ -51,7 +51,8 @@ function App() {
         <Toaster position="top-center" />
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* JAVÍTÁS: location helyett location.pathname-t adunk át */}
+          <Route path="*" element={<Navigate to="/login" replace state={{ from: location.pathname }} />} />
         </Routes>
       </div>
     );
