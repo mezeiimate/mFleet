@@ -1,0 +1,21 @@
+{
+  "short_name": "mFleet",
+  "name": "mFleet Flottakezelő Rendszer",
+  "description": "Gépjárművek és szerviznapló kezelése",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0B2C4B",
+  "background_color": "#D3D5D6"
+}
