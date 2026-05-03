@@ -87,8 +87,14 @@ function App() {
           <div className="flex justify-between h-16">
             
             <div className="flex items-center">
-              <span className="text-2xl font-black text-white tracking-tight">mFleet</span>
-              {/* lg:flex a md:flex helyett */}
+              {/* ÚJ: Kattintható logó, ami a jogosultságnak megfelelő kezdőlapra visz */}
+              <Link 
+                to={user.role === 'driver' ? '/sajat-auto' : '/'} 
+                className="text-2xl font-black text-white tracking-tight hover:text-gray-200 transition-colors"
+              >
+                mFleet
+              </Link>
+
               <div className="hidden lg:flex ml-10 space-x-6">
                 {navLinks.map(link => (
                   <Link 
@@ -107,7 +113,6 @@ function App() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* lg:flex a md:flex helyett */}
               <button 
                 onClick={handleProfileClick}
                 className="hidden lg:flex items-center text-sm font-medium text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full transition-colors cursor-pointer"
@@ -117,12 +122,10 @@ function App() {
                 {user.name} ({user.role === 'admin' ? 'Admin' : user.role === 'operator' ? 'Operátor' : 'Sofőr'})
               </button>
               
-              {/* lg:block a md:block helyett */}
               <button onClick={handleLogout} className="hidden lg:block text-gray-400 hover:text-[#D3D5D6] hover:bg-white/10 p-2 rounded-full transition-colors" title="Kijelentkezés">
                 <LogOut size={20} />
               </button>
 
-              {/* lg:hidden a md:hidden helyett */}
               <button 
                 className="lg:hidden p-2 text-white hover:bg-white/10 rounded-lg"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -133,7 +136,6 @@ function App() {
           </div>
         </div>
 
-        {/* lg:hidden a md:hidden helyett */}
         {isMobileMenuOpen && (
           <div className="lg:hidden bg-[#13395C] border-t border-white/10 px-4 pt-2 pb-4 space-y-1 shadow-lg">
             {navLinks.map(link => (
@@ -169,7 +171,7 @@ function App() {
                 <Route path="/matricak" element={<StickerSettings />} />
                 </>
             )}
-            {user.role === 'admin' && <Route path="/felhasznalok" element={<UserManagement />} />}
+            {user.role === 'admin' && <Route path="/felhasznalok" element={<UserManagement loggedInUser={user} />} />}
             {user.role === 'driver' && <Route path="/sajat-auto" element={<MyCar user={user} />} />}
             <Route path="/profil" element={<Profile user={user} onUserUpdate={handleLogin} />} />
             <Route path="*" element={<Navigate to={user.role === 'driver' ? '/sajat-auto' : '/'} replace />} />

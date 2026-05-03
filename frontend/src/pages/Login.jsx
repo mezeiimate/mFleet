@@ -42,7 +42,7 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl border border-[#D3D5D6] w-full max-w-md">
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-[#D3D5D6] w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-black mb-2 tracking-tighter"><span className="text-[#0B2C4B]">m</span><span className="text-[#13395C]">Fleet</span></h1>
           <h2 className="text-xl font-bold text-gray-800 tracking-tight mt-4">Bejelentkezés</h2>

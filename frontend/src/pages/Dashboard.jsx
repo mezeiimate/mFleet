@@ -8,7 +8,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState([]);
   
-  // Lapozás (Pagination) állapota
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -36,7 +35,6 @@ const Dashboard = () => {
         const sevenDaysLimit = new Date(); sevenDaysLimit.setDate(today.getDate() + 7);
 
         vehiclesWithStickers.forEach(v => {
-          // Kikeressük az adott járműhöz tartozó legfrissebb aktív hibajegyet
           const activeLog = logRes.find(l => l.vehicle_id === v.id && l.status === 'Folyamatban');
 
           if (v.status === 'Szervizben') {
@@ -62,7 +60,6 @@ const Dashboard = () => {
 
           if (v.technical_exam_until) {
             const examDate = new Date(v.technical_exam_until);
-            // Csak akkor jelezzük itt közeledőként, ha még nincs szervizben miatta a jármű
             if (examDate <= thirtyDaysLimit && examDate >= today && v.status !== 'Szervizben') {
               newAlerts.push({
                 id: `tech-warn-${v.id}`, priority: 1, title: 'KÖZELEDŐ MŰSZAKI VIZSGA',
@@ -109,7 +106,6 @@ const Dashboard = () => {
 
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse font-bold">Adatok betöltése...</div>;
 
-  // ÚJ LOGIKA: Kiszűrjük az archivált járműveket a statisztikákhoz!
   const activeFleet = vehicles.filter(v => v.status !== 'Archivált');
 
   const totalVehs = activeFleet.length;
@@ -117,13 +113,11 @@ const Dashboard = () => {
   const serviceVehs = activeFleet.filter(v => v.status === 'Szervizben').length;
   const alertCount = alerts.length; 
 
-  // A chartok (üzemanyag és kategória) is már csak az activeFleet-ből számolnak!
   const fuelStats = activeFleet.reduce((acc, v) => { acc[v.fuel_type] = (acc[v.fuel_type] || 0) + 1; return acc; }, {});
   const catStats = activeFleet.reduce((acc, v) => { acc[v.category] = (acc[v.category] || 0) + 1; return acc; }, {});
 
   const todayFormatted = new Date().toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
-  // Lapozás logikája
   const totalItems = alerts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const currentAlerts = alerts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -132,11 +126,9 @@ const Dashboard = () => {
     <div className="space-y-8 pb-10 text-slate-800">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-200 pb-6">
         <div>
-          {/* ÚJ SZÍN: #0B2C4B */}
           <h1 className="text-3xl font-black tracking-tight text-[#0B2C4B]">Áttekintés</h1>
         </div>
         <div className="flex items-center gap-2 text-slate-600 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm mt-4 md:mt-0">
-          {/* ÚJ SZÍN: #13395C */}
           <Calendar size={18} className="text-[#13395C]" />
           <span className="font-bold text-sm capitalize">{todayFormatted}</span>
         </div>
@@ -187,7 +179,6 @@ const Dashboard = () => {
                   <span className="text-slate-400">{totalVehs > 0 ? Math.round((count/totalVehs)*100) : 0}% ({count} db)</span>
                 </div>
                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  {/* ÚJ SZÍN: bg-[#13395C] */}
                   <div className="bg-[#13395C] h-full rounded-full transition-all duration-500" style={{ width: `${totalVehs > 0 ? (count/totalVehs)*100 : 0}%` }}></div>
                 </div>
               </div>
@@ -225,17 +216,17 @@ const Dashboard = () => {
           ) : (
             currentAlerts.map(alert => (
               <div key={alert.id} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-xl border-l-4 transition-all hover:translate-x-1 ${alert.bg} border-l-current shadow-sm`}>
-                <div className="flex gap-4 items-start">
+                <div className="flex gap-4 items-start w-full sm:w-auto">
                   <div className="shrink-0 mt-1">{alert.icon}</div>
-                  <div>
-                    <h4 className={`text-sm font-black uppercase tracking-tight mb-2 ${alert.text}`}>{alert.title}</h4>
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`text-sm font-black uppercase tracking-tight mb-2 break-words ${alert.text}`}>{alert.title}</h4>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700 mb-1">
                       <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-gray-200 shadow-sm">{alert.plate}</span>
-                      <span className="font-bold">{alert.carInfo}</span>
-                      <span className="text-gray-300">|</span>
+                      <span className="font-bold break-words">{alert.carInfo}</span>
+                      <span className="hidden sm:inline text-gray-300">|</span>
                       <span>Sofőr: <span className="font-bold text-gray-900">{alert.driver}</span></span>
                     </div>
-                    <div className="text-sm font-medium text-slate-800">
+                    <div className="text-sm font-medium text-slate-800 break-words">
                       <span className="text-gray-500 mr-1">Probléma:</span> {alert.issue}
                     </div>
                   </div>
@@ -249,20 +240,20 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* Lapozó UI */}
-        {totalItems > itemsPerPage && (
-          <div className="flex justify-between items-center p-4 bg-gray-50 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+        {/* ÚJ: Lapozó 10 elem felett mindig látszik, és mobilon flex-col */}
+        {totalItems > 10 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center p-4 bg-gray-50 border-t border-gray-100 gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
               <span>Sorok:</span>
-              <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="border border-gray-300 rounded-lg p-1 bg-white outline-none focus:border-[#13395C]">
+              <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="border border-gray-300 rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-[#13395C] w-full sm:w-auto">
                 <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
               </select>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center justify-between w-full sm:w-auto gap-4 text-sm text-gray-600">
               <span>{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} / {totalItems}</span>
-              <div className="flex gap-1">
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2 py-1 bg-white border border-gray-300 rounded disabled:opacity-50 font-medium transition-colors hover:bg-gray-50">Előző</button>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-2 py-1 bg-white border border-gray-300 rounded disabled:opacity-50 font-medium transition-colors hover:bg-gray-50">Következő</button>
+              <div className="flex gap-2">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 font-bold shadow-sm transition-colors hover:bg-gray-50">Előző</button>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 font-bold shadow-sm transition-colors hover:bg-gray-50">Követ</button>
               </div>
             </div>
           </div>
