@@ -83,7 +83,7 @@ function App() {
         }} 
       />
 
-      <nav className="bg-[#0B2C4B] sticky top-0 z-50 shadow-md">
+      <nav className="bg-[#0B2C4B] sticky top-0 z-50 shadow-md pt-[env(safe-area-inset-top)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             
